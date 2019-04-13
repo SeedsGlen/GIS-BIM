@@ -17,7 +17,8 @@ export default {
   },
   data() {
     return {
-      viewer: ""
+      viewer: "",
+      models: []
     };
   },
   mounted() {
@@ -163,6 +164,9 @@ export default {
     cancelFuction: function(oldVal) {
       switch (oldVal) {
         case "1":
+          this.$data.viewer.entities.remove(this.$data.models[0]);
+          console.log(this.$data.models[0])
+          console.log(this.$data.viewer.entities)
           break;
       }
     },
@@ -179,11 +183,15 @@ export default {
     changeFuction: function(status) {
       if (status.oldVal != "") {
         this.cancelFuction(status.oldVal);
+        console.log("取消功能" + status.oldVal)
       }
       this.chooseFuction(status.val);
+      console.log("选择功能" + status.val)
     },
     distanceFuction: function(viewer) {
       try {
+        var model_line;
+        var models = this.$data.models
         let PolyLinePrimitive = (function() {
           function _(positions) {
             this.options = {
@@ -235,7 +243,9 @@ export default {
               _updateText,
               false
             );
-            viewer.entities.add(this.options);
+            model_line = new Cesium.Entity(this.options)
+            viewer.entities.add(model_line);
+            models[0] = model_line
           };
 
           return _;

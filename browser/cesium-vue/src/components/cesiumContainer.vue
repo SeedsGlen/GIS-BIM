@@ -24,7 +24,14 @@ export default {
   mounted() {
     Cesium.Ion.defaultAccessToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3MTNmMWUzMy02OGE1LTQxMDktYTA5OS00NjQwMDE1NmUwMTgiLCJpZCI6ODgzMCwic2NvcGVzIjpbImFzbCIsImFzciIsImFzdyIsImdjIl0sImlhdCI6MTU1MjkwNzkzOH0.mQt1tjUe1fI51n2F_J_sMAurfRFaNouyJ4yFVTXB7pU";
-
+      axios.get("/static/AMap_adcode_citycode.json", {
+      })
+      .then(function(response) {
+        console.log(response);
+      })
+      .catch(function(error) {
+        console.log(error);
+      });
     var terrainProvider = Cesium.createWorldTerrain();
 
     var viewer = new Cesium.Viewer("cesiumContainer", {
@@ -165,8 +172,8 @@ export default {
       switch (oldVal) {
         case "1":
           this.$data.viewer.entities.remove(this.$data.models[0]);
-          console.log(this.$data.models[0])
-          console.log(this.$data.viewer.entities)
+          console.log(this.$data.models[0]);
+          console.log(this.$data.viewer.entities);
           break;
       }
     },
@@ -183,15 +190,15 @@ export default {
     changeFuction: function(status) {
       if (status.oldVal != "") {
         this.cancelFuction(status.oldVal);
-        console.log("取消功能" + status.oldVal)
+        console.log("取消功能" + status.oldVal);
       }
       this.chooseFuction(status.val);
-      console.log("选择功能" + status.val)
+      console.log("选择功能" + status.val);
     },
     distanceFuction: function(viewer) {
       try {
         var model_line;
-        var models = this.$data.models
+        var models = this.$data.models;
         let PolyLinePrimitive = (function() {
           function _(positions) {
             this.options = {
@@ -243,9 +250,9 @@ export default {
               _updateText,
               false
             );
-            model_line = new Cesium.Entity(this.options)
+            model_line = new Cesium.Entity(this.options);
             viewer.entities.add(model_line);
-            models[0] = model_line
+            models[0] = model_line;
           };
 
           return _;

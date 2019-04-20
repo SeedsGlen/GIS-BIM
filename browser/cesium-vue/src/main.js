@@ -4,13 +4,15 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import Cesium from 'cesium/Cesium'; 
-import { Select, Option } from 'element-ui'
+import { Select, Option, Autocomplete, Icon} from 'element-ui'
 import axios from 'axios'
 
 Vue.prototype.axios = axios;
 
 Vue.use(Select)
 Vue.use(Option)
+Vue.use(Autocomplete)
+Vue.use(Icon)
 /* eslint-disable no-new */
 Array.prototype.indexOf = function (val) {
   for (var i = 0; i < this.length; i++) {

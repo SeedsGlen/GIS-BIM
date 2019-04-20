@@ -2,6 +2,7 @@
   <div>
     <toolbar @changeFuction="changeFuction"></toolbar>
     <div id="cesiumContainer"/>
+    <searchBar @handleSearch="handleSearch"></searchBar>
   </div>
 </template>
 
@@ -9,18 +10,21 @@
 import Cesium from "cesium/Cesium";
 import widgets from "cesium/Widgets/widgets.css";
 import toolbar from "@/components/toolbar";
+import searchBar from "@/components/searchBar";
 
 export default {
   name: "cesiumContainer",
   components: {
-    toolbar: toolbar
+    toolbar: toolbar,
+    searchBar: searchBar
   },
   data() {
     return {
       viewer: "",
       models: [],
       cityData: {},
-      particleSystem: []
+      particleSystem: [],
+      currentListener: [],
     };
   },
   mounted() {
@@ -31,20 +35,23 @@ export default {
       scene3DOnly: true,
       navigationHelpButton: false,
       shouldAnimate: true,
+      shadows: true,
+      geocoder: false,
+      terrainShadows: Cesium.ShadowMode.ENABLED,
       terrainProvider: Cesium.createWorldTerrain()
     });
     this.$data.viewer = viewer;
     var scene = viewer.scene;
-    // scene.globe.depthTestAgainstTerrain = true;
+    scene.globe.depthTestAgainstTerrain = true;
     scene.globe.enableLighting = true;
-    var tileset = viewer.scene.primitives.add(
-      new Cesium.Cesium3DTileset({
-        url: Cesium.IonResource.fromAssetId(20119)
-      })
-    );
+    // var tileset = viewer.scene.primitives.add(
+    //   new Cesium.Cesium3DTileset({
+    //     url: Cesium.IonResource.fromAssetId(20119)
+    //   })
+    // );
 
-    viewer.scene.primitives.add(tileset);
-    viewer.zoomTo(tileset);
+    // viewer.scene.primitives.add(tileset);
+    // viewer.zoomTo(tileset);
 
     // viewer.clock.onTick.addEventListener(function() {
     //   if (viewer.camera.pitch > 0) {
@@ -65,149 +72,34 @@ export default {
     //     }
     //   }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
     // }, Cesium.ScreenSpaceEventType.MIDDLE_DOWN);
-    // var resetCameraFunction = function() {
-    //   scene.camera.setView({
-    //     destination: new Cesium.Cartesian3(
-    //       277096.634865404,
-    //       5647834.481964232,
-    //       2985563.7039122293
-    //     ),
-    //     orientation: {
-    //       heading: 4.731089976107251,
-    //       pitch: -0.32003481981370063
-    //     }
-    //   });
-    // };
-    // resetCameraFunction();
-
-    // this.addWeather("雪", "中");
-
-    // 小车旋转角度
-    // let radian = Cesium.Math.toRadians(3.0);
-    // // 小车的速度
-    // let speed = 60;
-    // // 速度矢量
-    // let speedVector = new Cesium.Cartesian3();
-    // // 起始位置
-    // let position = Cesium.Cartesian3.fromDegrees(116.080591, 39.919141, 3000);
-
-    // // 用于设置小车方向
-    // let hpRoll = new Cesium.HeadingPitchRoll();
-    // let fixedFrameTransforms = Cesium.Transforms.localFrameToFixedFrameGenerator(
-    //   "north",
-    //   "west"
-    // );
-    // let model = Cesium.Model.fromGltf({
-    //   url: "/static/models/Cesium_Air.glb",
-    //   modelMatrix: Cesium.Transforms.headingPitchRollToFixedFrame(
-    //     position,
-    //     hpRoll,
-    //     Cesium.Ellipsoid.WGS84,
-    //     fixedFrameTransforms
-    //   ),
-    //   minimumPixelSize: 128,
-    //   heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
-    // });
-
-    // let carPrimitive = scene.primitives.add(model);
-    // // Query the terrain height of two Cartographic positions
-
-    // // 小车状态标志
-    // let flag = {
-    //   moveUp: false,
-    //   moveDown: false,
-    //   moveLeft: false,
-    //   moveRight: false
-    // };
-
-    // // 根据键盘按键返回标志
-    // function setFlagStatus(key, value) {
-    //   switch (key.keyCode) {
-    //     case 37:
-    //       // 左
-    //       flag.moveLeft = value;
-    //       break;
-    //     case 38:
-    //       // 上
-    //       flag.moveUp = value;
-    //       break;
-    //     case 39:
-    //       // 右
-    //       flag.moveRight = value;
-    //       break;
-    //     case 40:
-    //       flag.moveDown = value;
-    //       // 下
-    //       break;
-    //   }
-    // }
-    // function moveCar(isUP) {
-    //   // 计算速度矩阵
-    //   if (isUP > 0) {
-    //     speedVector = Cesium.Cartesian3.multiplyByScalar(
-    //       Cesium.Cartesian3.UNIT_X,
-    //       speed,
-    //       speedVector
-    //     );
-    //   } else {
-    //     speedVector = Cesium.Cartesian3.multiplyByScalar(
-    //       Cesium.Cartesian3.UNIT_X,
-    //       -speed,
-    //       speedVector
-    //     );
-    //   }
-    //   // 根据速度计算出下一个位置的坐标
-    //   position = Cesium.Matrix4.multiplyByPoint(
-    //     carPrimitive.modelMatrix,
-    //     speedVector,
-    //     position
-    //   );
-    //   // console.log(position)
-    //   // 小车移动
-    //   Cesium.Transforms.headingPitchRollToFixedFrame(
-    //     position,
-    //     hpRoll,
-    //     Cesium.Ellipsoid.WGS84,
-    //     fixedFrameTransforms,
-    //     carPrimitive.modelMatrix
-    //   );
-    // }
-
-    // document.addEventListener("keydown", e => {
-    //   setFlagStatus(e, true);
-    // });
-
-    // document.addEventListener("keyup", e => {
-    //   setFlagStatus(e, false);
-    // });
-    // viewer.clock.onTick.addEventListener(clock => {
-    //   if (flag.moveUp) {
-    //     if (flag.moveLeft) {
-    //       hpRoll.heading -= radian;
-    //     }
-    //     if (flag.moveRight) {
-    //       hpRoll.heading += radian;
-    //     }
-    //     moveCar(true);
-    //   }
-    //   if (flag.moveDown) {
-    //     if (flag.moveLeft) {
-    //       hpRoll.heading -= radian;
-    //     }
-    //     if (flag.moveRight) {
-    //       hpRoll.heading += radian;
-    //     }
-    //     moveCar(false);
-    //   }
-    // });
   },
   methods: {
+    handleSearch: function(location) {
+      console.log(location);
+      this.$data.viewer.camera.setView({
+        destination: new Cesium.Cartesian3.fromDegrees(
+          location.split(",")[0],
+          location.split(",")[1],
+          3000
+        ),
+        orientation: {
+          heading: 4.731089976107251,
+          pitch: -0.32003481981370063
+        }
+      });
+    },
     cancelFuction: function(oldVal) {
       switch (oldVal) {
         case "1":
           this.$data.viewer.entities.remove(this.$data.models[0]);
           console.log(this.$data.models[0]);
           console.log(this.$data.viewer.entities);
+          break;
+        case "2":
+          this.$data.viewer.clock.onTick.removeEventListener(this.$data.currentListener.pop())
+          document.removeEventListener("keyup", this.$data.currentListener.pop())
+          document.removeEventListener("keydown", this.$data.currentListener.pop())
+          this.$data.viewer.scene.primitives.remove(this.$data.models.pop())
           break;
       }
     },
@@ -219,6 +111,7 @@ export default {
           break;
         case "2":
           console.log(val);
+          this.moveCar()
           break;
         case "3":
           this.getCursorPosition(this.$data.viewer);
@@ -257,7 +150,8 @@ export default {
                 outlineWidth: 2,
                 verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
                 pixelOffset: new Cesium.Cartesian2(20, -20),
-                heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
               }
             };
             this.positions = positions;
@@ -375,6 +269,132 @@ export default {
       //   console.log(viewer.entities.values);
       // }, 10000);
     },
+    moveCar: function() {
+      var scene = this.$data.viewer.scene 
+      //小车旋转角度
+      let radian = Cesium.Math.toRadians(3.0);
+      // 小车的速度
+      let speed = 60;
+      // 速度矢量
+      let speedVector = new Cesium.Cartesian3();
+      // 起始位置
+      let position = Cesium.Cartesian3.fromDegrees(116.080591, 39.919141, 3000);
+
+      // 用于设置小车方向
+      let hpRoll = new Cesium.HeadingPitchRoll();
+      let fixedFrameTransforms = Cesium.Transforms.localFrameToFixedFrameGenerator(
+        "north",
+        "west"
+      );
+      let model = Cesium.Model.fromGltf({
+        url: "/static/models/Cesium_Air.glb",
+        modelMatrix: Cesium.Transforms.headingPitchRollToFixedFrame(
+          position,
+          hpRoll,
+          Cesium.Ellipsoid.WGS84,
+          fixedFrameTransforms
+        ),
+        minimumPixelSize: 128,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+      });
+      this.$data.models.push(model)
+      let carPrimitive = scene.primitives.add(model);
+      // Query the terrain height of two Cartographic positions
+
+      // 小车状态标志
+      let flag = {
+        moveUp: false,
+        moveDown: false,
+        moveLeft: false,
+        moveRight: false
+      };
+
+      // 根据键盘按键返回标志
+      function setFlagStatus(key, value) {
+        switch (key.keyCode) {
+          case 37:
+            // 左
+            flag.moveLeft = value;
+            break;
+          case 38:
+            // 上
+            flag.moveUp = value;
+            break;
+          case 39:
+            // 右
+            flag.moveRight = value;
+            break;
+          case 40:
+            flag.moveDown = value;
+            // 下
+            break;
+        }
+      }
+      function moveCar(isUP) {
+        // 计算速度矩阵
+        if (isUP > 0) {
+          speedVector = Cesium.Cartesian3.multiplyByScalar(
+            Cesium.Cartesian3.UNIT_X,
+            speed,
+            speedVector
+          );
+        } else {
+          speedVector = Cesium.Cartesian3.multiplyByScalar(
+            Cesium.Cartesian3.UNIT_X,
+            -speed,
+            speedVector
+          );
+        }
+        // 根据速度计算出下一个位置的坐标
+        position = Cesium.Matrix4.multiplyByPoint(
+          carPrimitive.modelMatrix,
+          speedVector,
+          position
+        );
+        // console.log(position)
+        // 小车移动
+        Cesium.Transforms.headingPitchRollToFixedFrame(
+          position,
+          hpRoll,
+          Cesium.Ellipsoid.WGS84,
+          fixedFrameTransforms,
+          carPrimitive.modelMatrix
+        );
+      }
+      var keydownEvent = function(e){
+        
+        setFlagStatus(e, true);
+      }
+      var keyupEvent = function(e) {
+        setFlagStatus(e, false);
+      }
+      var moveModelEvent = function(clock) {
+        if (flag.moveUp) {
+          if (flag.moveLeft) {
+            hpRoll.heading -= radian;
+          }
+          if (flag.moveRight) {
+            hpRoll.heading += radian;
+          }
+          moveCar(true);
+        }
+        if (flag.moveDown) {
+          if (flag.moveLeft) {
+            hpRoll.heading -= radian;
+          }
+          if (flag.moveRight) {
+            hpRoll.heading += radian;
+          }
+          moveCar(false);
+        }
+      }
+      this.$data.currentListener.push(keydownEvent)
+      this.$data.currentListener.push(keyupEvent)
+      this.$data.currentListener.push(moveModelEvent)
+      document.addEventListener("keydown", keydownEvent);
+      document.addEventListener("keyup", keyupEvent);
+      this.$data.viewer.clock.onTick.addEventListener(moveModelEvent);
+    },
     getCursorPosition: function(viewer) {
       var that = this;
       //得到当前三维场景
@@ -383,7 +403,9 @@ export default {
       var ellipsoid = scene.globe.ellipsoid;
       var entity = viewer.entities.add({
         label: {
-          show: false
+          show: false,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
         }
       });
       var longitudeString = null;

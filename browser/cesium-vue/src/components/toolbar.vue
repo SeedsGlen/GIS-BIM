@@ -1,6 +1,6 @@
 <template>
   <div class="toolbar">
-    <el-select v-model="value" placeholder="请选择">
+    <el-select ref="select" v-model="value" placeholder="请选择">
       <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value"></el-option>
     </el-select>
   </div>
@@ -19,7 +19,7 @@ export default {
         },
         {
           value: "2",
-          label: "双皮奶"
+          label: "小飞机"
         },
         {
           value: "3",
@@ -43,6 +43,7 @@ export default {
   },
   watch: {
     value(val, oldVal) {
+      console.log(this.$refs["select"].blur())
       this.$emit('changeFuction',{val, oldVal})
     }
   }

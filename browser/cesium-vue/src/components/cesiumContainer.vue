@@ -37,6 +37,15 @@ export default {
     var scene = viewer.scene;
     // scene.globe.depthTestAgainstTerrain = true;
     scene.globe.enableLighting = true;
+    var tileset = viewer.scene.primitives.add(
+      new Cesium.Cesium3DTileset({
+        url: Cesium.IonResource.fromAssetId(20119)
+      })
+    );
+
+    viewer.scene.primitives.add(tileset);
+    viewer.zoomTo(tileset);
+
     // viewer.clock.onTick.addEventListener(function() {
     //   if (viewer.camera.pitch > 0) {
     //     viewer.scene.screenSpaceCameraController.enableTilt = false;
@@ -605,10 +614,7 @@ export default {
           weatherImage = "/static/particle/circular_particle.png";
           ParticleSize = scene.drawingBufferWidth / 80.0;
           Radius = 100000.0;
-          ImageSize = new Cesium.Cartesian2(
-            ParticleSize,
-            ParticleSize * 2.0
-          );
+          ImageSize = new Cesium.Cartesian2(ParticleSize, ParticleSize * 2.0);
           GravityScratch = new Cesium.Cartesian3();
           Update = function(particle, dt) {
             GravityScratch = Cesium.Cartesian3.normalize(

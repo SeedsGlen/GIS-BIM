@@ -5,6 +5,9 @@ import App from './App'
 import router from './router'
 import Cesium from 'cesium/Cesium'; 
 import { Select, Option } from 'element-ui'
+import axios from 'axios'
+
+Vue.prototype.axios = axios;
 
 Vue.use(Select)
 Vue.use(Option)

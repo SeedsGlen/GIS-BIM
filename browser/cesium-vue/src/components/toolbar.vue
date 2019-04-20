@@ -23,7 +23,7 @@ export default {
         },
         {
           value: "3",
-          label: "蚵仔煎"
+          label: "鼠标当前经纬度"
         },
         {
           value: "4",

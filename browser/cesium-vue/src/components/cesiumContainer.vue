@@ -19,99 +19,60 @@ export default {
     return {
       viewer: "",
       models: [],
-      cityData: {}
+      cityData: {},
+      particleSystem: []
     };
   },
   mounted() {
+    var that = this;
     Cesium.Ion.defaultAccessToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3MTNmMWUzMy02OGE1LTQxMDktYTA5OS00NjQwMDE1NmUwMTgiLCJpZCI6ODgzMCwic2NvcGVzIjpbImFzbCIsImFzciIsImFzdyIsImdjIl0sImlhdCI6MTU1MjkwNzkzOH0.mQt1tjUe1fI51n2F_J_sMAurfRFaNouyJ4yFVTXB7pU";
-    // http://localhost:8080/static/AMap_adcode_citycode.json
-    // http://localhost:8080/static/AMap_adcode_citycode.json
-    var that = this;
-    // this.axios
-    // .get("/static/AMap_adcode_citycode.json")
-    // .then(function(response) {
-    //   // console.log(response.data.中文名)
-    //   for(let key in response.data.中文名){
-    //       that.$data.cityData[response.data.中文名[key]] = response.data.adcode[key]
-    //   }
-    //   console.log(that.$data.cityData)
-    // })
-    // .catch(function(error) {
-    //   console.log(error);
-    // });
-
-    var terrainProvider = Cesium.createWorldTerrain();
-
     var viewer = new Cesium.Viewer("cesiumContainer", {
       scene3DOnly: true,
       navigationHelpButton: false,
       shouldAnimate: true,
-      terrainProvider: terrainProvider
-      // imageryProvider: new Cesium.ArcGisMapServerImageryProvider({
-      //    url : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer'
-      // }),
+      terrainProvider: Cesium.createWorldTerrain()
     });
     this.$data.viewer = viewer;
-    viewer.scene.globe.depthTestAgainstTerrain = true;
-    viewer.scene.globe.enableLighting = true;
+    var scene = viewer.scene;
+    // scene.globe.depthTestAgainstTerrain = true;
+    scene.globe.enableLighting = true;
+    // viewer.clock.onTick.addEventListener(function() {
+    //   if (viewer.camera.pitch > 0) {
+    //     viewer.scene.screenSpaceCameraController.enableTilt = false;
+    //   }
+    // });
+    // var mousePosition, startMousePosition;
+    // var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+    // handler.setInputAction(function(movement) {
+    //   mousePosition = startMousePosition = Cesium.Cartesian3.clone(
+    //     movement.position
+    //   );
+    //   handler.setInputAction(function(movement) {
+    //     mousePosition = movement.endPosition;
+    //     var y = mousePosition.y - startMousePosition.y;
+    //     if (y > 0) {
+    //       viewer.scene.screenSpaceCameraController.enableTilt = true;
+    //     }
+    //   }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    // }, Cesium.ScreenSpaceEventType.MIDDLE_DOWN);
+    // var resetCameraFunction = function() {
+    //   scene.camera.setView({
+    //     destination: new Cesium.Cartesian3(
+    //       277096.634865404,
+    //       5647834.481964232,
+    //       2985563.7039122293
+    //     ),
+    //     orientation: {
+    //       heading: 4.731089976107251,
+    //       pitch: -0.32003481981370063
+    //     }
+    //   });
+    // };
+    // resetCameraFunction();
 
-    let scene = viewer.scene;
+    // this.addWeather("雪", "中");
 
-    var rainParticleSize = scene.drawingBufferWidth / 80.0;
-    var rainRadius = 100000.0;
-    var rainImageSize = new Cesium.Cartesian2(
-      rainParticleSize,
-      rainParticleSize * 2.0
-    );
-
-    var rainSystem;
-
-    var rainGravityScratch = new Cesium.Cartesian3();
-    var rainUpdate = function(particle, dt) {
-      rainGravityScratch = Cesium.Cartesian3.normalize(
-        particle.position,
-        rainGravityScratch
-      );
-      rainGravityScratch = Cesium.Cartesian3.multiplyByScalar(
-        rainGravityScratch,
-        -1050.0,
-        rainGravityScratch
-      );
-
-      particle.position = Cesium.Cartesian3.add(
-        particle.position,
-        rainGravityScratch,
-        particle.position
-      );
-
-      var distance = Cesium.Cartesian3.distance(
-        scene.camera.position,
-        particle.position
-      );
-      if (distance > rainRadius) {
-        particle.endColor.alpha = 0.0;
-      } else {
-        particle.endColor.alpha =
-          rainSystem.endColor.alpha / (distance / rainRadius + 0.1);
-      }
-    };
-
-    rainSystem = new Cesium.ParticleSystem({
-      modelMatrix: new Cesium.Matrix4.fromTranslation(scene.camera.position),
-      speed: -1.0,
-      lifetime: 15.0,
-      emitter: new Cesium.SphereEmitter(rainRadius),
-      startScale: 1.0,
-      endScale: 0.0,
-      image: "/static/particle/circular_particle.png",
-      emissionRate: 9000.0,
-      startColor: new Cesium.Color(0.27, 0.5, 0.7, 0.0),
-      endColor: new Cesium.Color(0.27, 0.5, 0.7, 0.98),
-      imageSize: rainImageSize,
-      updateCallback: rainUpdate
-    });
-    scene.primitives.add(rainSystem);
     // 小车旋转角度
     // let radian = Cesium.Math.toRadians(3.0);
     // // 小车的速度
@@ -464,31 +425,43 @@ export default {
             viewer.camera.getPickRay(pt2),
             viewer.scene
           );
-
+          var geoPt1, geoPt2;
+          var point1, point2;
           //将三维坐标转成地理坐标
-          var geoPt1 = viewer.scene.globe.ellipsoid.cartesianToCartographic(
-            pick1
-          );
-          var geoPt2 = viewer.scene.globe.ellipsoid.cartesianToCartographic(
-            pick2
-          );
-
-          //地理坐标转换为经纬度坐标
-          var point1 = [
-            (geoPt1.longitude / Math.PI) * 180,
-            (geoPt1.latitude / Math.PI) * 180
-          ];
-          var point2 = [
-            (geoPt2.longitude / Math.PI) * 180,
-            (geoPt2.latitude / Math.PI) * 180
-          ];
+          if (pick1 != undefined) {
+            geoPt1 = viewer.scene.globe.ellipsoid.cartesianToCartographic(
+              pick1
+            );
+            point1 = [
+              (geoPt1.longitude / Math.PI) * 180,
+              (geoPt1.latitude / Math.PI) * 180
+            ];
+          }
+          if (pick2 != undefined) {
+            geoPt2 = viewer.scene.globe.ellipsoid.cartesianToCartographic(
+              pick2
+            );
+            //地理坐标转换为经纬度坐标
+            point2 = [
+              (geoPt2.longitude / Math.PI) * 180,
+              (geoPt2.latitude / Math.PI) * 180
+            ];
+          }
           // point1 + point2
-
+          if (point1 == undefined) {
+            point1 = point2;
+          }
+          if (point2 == undefined) {
+            point2 = point1;
+          }
+          var point = point1.map(function(v, i) {
+            return (v + point2[i]) / 2;
+          });
           that.axios
             .get("https://restapi.amap.com/v3/geocode/regeo", {
               params: {
                 key: "c0d0f4490c8b9f64307a5b671ce69469",
-                location: point1[0] + "," + point1[1]
+                location: point[0] + "," + point[1]
               }
             })
             .then(function(response) {
@@ -505,14 +478,19 @@ export default {
                     if (response.data.status == "1") {
                       console.log(response.data);
                       console.log(response.data.lives[0].weather);
-                      if (response.data.lives[0].weather.indexOf("晴") != -1) {
+                      that.removeCurrentWeather();
+                      if (response.data.lives[0].weather.indexOf("阴") != -1) {
                         // rain
+                        // that.addWeather("雨", "中");
+                        that.addWeather("雪", "中");
                       } else if (
                         response.data.lives[0].weather.indexOf("雪") != -1
                       ) {
+                        that.addWeather("雪", "中");
                       } else if (
                         response.data.lives[0].weather.indexOf("雾") != -1
                       ) {
+                        that.addWeather("雾", "中");
                       } else if (
                         response.data.lives[0].weather.indexOf("晴") != -1
                       ) {
@@ -540,6 +518,166 @@ export default {
       handler.setInputAction(function(movement) {
         handler.destroy();
       }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    },
+    getWeatherParticle: function(weather, size) {
+      var scene = this.$data.viewer.scene;
+      // rain
+      var ParticleSize;
+      var Radius;
+      var ImageSize;
+      var System;
+      var GravityScratch;
+      var Update;
+      var weatherImage;
+      var weatherSize;
+      switch (size) {
+        case "大":
+          weatherSize = 900.0;
+          break;
+        case "小":
+          weatherSize = 30.0;
+          break;
+        case "中":
+          weatherSize = 200.0;
+          break;
+      }
+      switch (weather) {
+        case "雪":
+          weatherImage = "/static/particle/snowflake_particle.png";
+          ParticleSize = scene.drawingBufferWidth / 100.0;
+          Radius = 100000.0;
+          var minimumSnowImageSize = new Cesium.Cartesian2(
+            ParticleSize,
+            ParticleSize
+          );
+          var maximumSnowImageSize = new Cesium.Cartesian2(
+            ParticleSize * 2.0,
+            ParticleSize * 2.0
+          );
+          GravityScratch = new Cesium.Cartesian3();
+          Update = function(particle, dt) {
+            GravityScratch = Cesium.Cartesian3.normalize(
+              particle.position,
+              GravityScratch
+            );
+            Cesium.Cartesian3.multiplyByScalar(
+              GravityScratch,
+              Cesium.Math.randomBetween(-30.0, -300.0),
+              GravityScratch
+            );
+            particle.velocity = Cesium.Cartesian3.add(
+              particle.velocity,
+              GravityScratch,
+              particle.velocity
+            );
+
+            var distance = Cesium.Cartesian3.distance(
+              scene.camera.position,
+              particle.position
+            );
+            if (distance > Radius) {
+              particle.endColor.alpha = 0.0;
+            } else {
+              particle.endColor.alpha =
+                System.endColor.alpha / (distance / Radius + 0.1);
+            }
+          };
+          System = new Cesium.ParticleSystem({
+            modelMatrix: new Cesium.Matrix4.fromTranslation(
+              scene.camera.position
+            ),
+            minimumSpeed: -1.0,
+            maximumSpeed: 0.0,
+            lifetime: 15.0,
+            emitter: new Cesium.SphereEmitter(Radius),
+            startScale: 0.5,
+            endScale: 1.0,
+            image: weatherImage,
+            emissionRate: weatherSize,
+            startColor: Cesium.Color.WHITE.withAlpha(0.0),
+            endColor: Cesium.Color.WHITE.withAlpha(1.0),
+            minimumImageSize: minimumSnowImageSize,
+            maximumImageSize: maximumSnowImageSize,
+            updateCallback: Update
+          });
+          break;
+        case "雨":
+          weatherImage = "/static/particle/circular_particle.png";
+          ParticleSize = scene.drawingBufferWidth / 80.0;
+          Radius = 100000.0;
+          ImageSize = new Cesium.Cartesian2(
+            ParticleSize,
+            ParticleSize * 2.0
+          );
+          GravityScratch = new Cesium.Cartesian3();
+          Update = function(particle, dt) {
+            GravityScratch = Cesium.Cartesian3.normalize(
+              particle.position,
+              GravityScratch
+            );
+            GravityScratch = Cesium.Cartesian3.multiplyByScalar(
+              GravityScratch,
+              -1050.0,
+              GravityScratch
+            );
+
+            particle.position = Cesium.Cartesian3.add(
+              particle.position,
+              GravityScratch,
+              particle.position
+            );
+
+            var distance = Cesium.Cartesian3.distance(
+              scene.camera.position,
+              particle.position
+            );
+            if (distance > Radius) {
+              particle.endColor.alpha = 0.0;
+            } else {
+              particle.endColor.alpha =
+                System.endColor.alpha / (distance / Radius + 0.1);
+            }
+          };
+
+          System = new Cesium.ParticleSystem({
+            modelMatrix: new Cesium.Matrix4.fromTranslation(
+              scene.camera.position
+            ),
+            speed: -1.0,
+            lifetime: 15.0,
+            emitter: new Cesium.SphereEmitter(Radius),
+            startScale: 1.0,
+            endScale: 0.0,
+            image: "../../../../Apps/SampleData/circular_particle.png",
+            emissionRate: 9000.0,
+            startColor: new Cesium.Color(0.27, 0.5, 0.7, 0.0),
+            endColor: new Cesium.Color(0.27, 0.5, 0.7, 0.98),
+            imageSize: ImageSize,
+            updateCallback: Update
+          });
+          break;
+        case "雾":
+          weatherImage = "/static/particle/smoke.png";
+          break;
+      }
+
+      console.log(weatherImage);
+      console.log(weatherSize);
+      console.log(scene.camera.position);
+      return System;
+    },
+    addWeather: function(weather, size) {
+      var System = this.getWeatherParticle(weather, size);
+      this.$data.particleSystem.push(System);
+      this.$data.viewer.scene.primitives.add(System);
+      console.log(System);
+    },
+    removeCurrentWeather: function() {
+      if (this.$data.particleSystem.length > 0) {
+        this.$data.viewer.scene.primitives.remove(
+          this.$data.particleSystem.pop()
+        );
+      }
     }
   }
 };

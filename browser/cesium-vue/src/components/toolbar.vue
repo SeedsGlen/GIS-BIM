@@ -23,7 +23,7 @@ export default {
         },
         {
           value: "3",
-          label: "鼠标当前经纬度"
+          label: "天气"
         },
         {
           value: "4",

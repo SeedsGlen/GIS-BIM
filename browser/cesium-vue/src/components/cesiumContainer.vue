@@ -745,11 +745,13 @@ export default {
       var viewer = this.$data.viewer;
       var clippingPlanes_x = 0.0;
       var clippingPlanes_y = 0.0;
-      var clippingPlanes_z = -1.0;
+      var clippingPlanes_z = 1.0;
+      var clippingAngleX = 0
+      var clippingAngleY = 0
       var clippingPlanes_dis = 0.0;
       //init
       var clippingPlanes = [
-        new Cesium.ClippingPlane(new Cesium.Cartesian3(0.0, 0.0, -1.0), 0.0)
+        new Cesium.ClippingPlane(new Cesium.Cartesian3(clippingPlanes_x, clippingPlanes_y, clippingPlanes_z), 0.0)
       ];
       var modelEntityClippingPlanes = new Cesium.ClippingPlaneCollection({
         planes: clippingPlanes,
@@ -760,10 +762,17 @@ export default {
         if (flags["looking"] == true) {
           modelEntityClippingPlanes.removeAll();
           if (flags.moveForward) {
-            clippingPlanes_x++;
+            clippingAngleX += 0.1;
+            clippingPlanes_x = Math.sin(clippingAngleX)
+            clippingPlanes_z = Math.cos(clippingAngleX)
+            console.log("("+clippingPlanes_x+ ","+clippingPlanes_y+","+clippingPlanes_z+")")
+            console.log("clippingPlanes_x"+clippingPlanes_x)
+            console.log("clippingPlanes_y"+clippingPlanes_z)
           }
           if (flags.moveBackward) {
-            clippingPlanes_x--;
+            clippingAngleX -= 0.1;
+            clippingPlanes_x = Math.sin(clippingAngleX)
+            clippingPlanes_z = Math.cos(clippingAngleX)
           }
           if (flags.moveUp) {
             clippingPlanes_dis++;
@@ -772,10 +781,14 @@ export default {
             clippingPlanes_dis--;
           }
           if (flags.moveLeft) {
-            clippingPlanes_y++;
+            clippingAngleY += 0.1
+            clippingPlanes_y = Math.sin(clippingAngleY)
+            clippingPlanes_z = Math.cos(clippingAngleY)
           }
           if (flags.moveRight) {
-            clippingPlanes_y--;
+            clippingAngleY -= 0.1;
+            clippingPlanes_y = Math.sin(clippingAngleY)
+            clippingPlanes_z = Math.cos(clippingAngleY)
           }
           modelEntityClippingPlanes.add(
             new Cesium.ClippingPlane(
@@ -799,15 +812,15 @@ export default {
       var pitch = 0.0;
       var roll = 0.0;
       var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
-      var orientation = Cesium.Transforms.headingPitchRollQuaternion(
-        position,
-        hpr
-      );
+      // var orientation = Cesium.Transforms.headingPitchRollQuaternion(
+      //   position,
+      //   hpr
+      // );
       var entity = viewer.entities.add({
         id: "entityClippingModel",
         name: "entityClippingModel",
         position: position,
-        orientation: orientation,
+        // orientation: orientation,
         model: {
           uri: "/static/models/Cesium_Air.glb",
           scale: 8,

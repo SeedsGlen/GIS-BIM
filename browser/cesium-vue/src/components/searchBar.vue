@@ -51,13 +51,13 @@ export default {
           }
         })
         .then(function(response) {
-          console.log(response);
+          // console.log(response);
           if (response.data.status == "1") {
-            console.log(response);
+            // console.log(response);
             results = [];
             response.data.tips.map(function(item) {
               if (item.location != "") {
-                console.log(item.name);
+                // console.log(item.name);
                 results.push({
                   value: item.name,
                   address: item.district + item.address,
@@ -65,7 +65,7 @@ export default {
                 });
               }
             });
-            console.log(results);
+            // console.log(results);
             cb(results);
           }
         })

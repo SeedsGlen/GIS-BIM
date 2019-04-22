@@ -24,7 +24,7 @@ export default {
       models: [],
       cityData: {},
       particleSystem: [],
-      currentListener: [],
+      currentListener: []
     };
   },
   mounted() {
@@ -91,15 +91,46 @@ export default {
     cancelFuction: function(oldVal) {
       switch (oldVal) {
         case "1":
-          this.$data.viewer.entities.remove(this.$data.models[0]);
-          console.log(this.$data.models[0]);
+          this.$data.viewer.entities.remove(
+            this.$data.viewer.entities.getById("distance")
+          );
+          // console.log(this.$data.models[0]);
           console.log(this.$data.viewer.entities);
           break;
         case "2":
-          this.$data.viewer.clock.onTick.removeEventListener(this.$data.currentListener.pop())
-          document.removeEventListener("keyup", this.$data.currentListener.pop())
-          document.removeEventListener("keydown", this.$data.currentListener.pop())
-          this.$data.viewer.scene.primitives.remove(this.$data.models.pop())
+          this.$data.viewer.clock.onTick.removeEventListener(
+            this.$data.currentListener.pop()
+          );
+          document.removeEventListener(
+            "keyup",
+            this.$data.currentListener.pop()
+          );
+          document.removeEventListener(
+            "keydown",
+            this.$data.currentListener.pop()
+          );
+          this.$data.viewer.scene.primitives.remove(this.$data.models.pop());
+          break;
+        case "3":
+          this.$data.viewer.entities.remove(
+            this.$data.viewer.entities.getById("cursorPosition")
+          );
+          break;
+        case "4":
+          this.$data.viewer.entities.remove(
+            this.$data.viewer.entities.getById("entityClippingPlanes")
+          );
+          this.$data.viewer.entities.remove(
+            this.$data.viewer.entities.getById("entityClippingModel")
+          );
+          document.removeEventListener(
+            "keyup",
+            this.$data.currentListener.pop()
+          );
+          document.removeEventListener(
+            "keydown",
+            this.$data.currentListener.pop()
+          );
           break;
       }
     },
@@ -111,10 +142,13 @@ export default {
           break;
         case "2":
           console.log(val);
-          this.moveCar()
+          this.moveCar();
           break;
         case "3":
-          this.getCursorPosition(this.$data.viewer);
+          this.getCursorPosition();
+          break;
+        case "4":
+          this.clipFuction();
           break;
       }
     },
@@ -129,12 +163,12 @@ export default {
     distanceFuction: function(viewer) {
       try {
         var model_line;
-        var models = this.$data.models;
         let PolyLinePrimitive = (function() {
           function _(positions) {
             this.options = {
+              id: "distance",
               polyline: {
-                id: "distance",
+                id: "distance_polyline",
                 show: true,
                 positions: [],
                 material: Cesium.Color.CORNFLOWERBLUE,
@@ -184,7 +218,6 @@ export default {
             );
             model_line = new Cesium.Entity(this.options);
             viewer.entities.add(model_line);
-            models[0] = model_line;
           };
 
           return _;
@@ -270,7 +303,7 @@ export default {
       // }, 10000);
     },
     moveCar: function() {
-      var scene = this.$data.viewer.scene 
+      var scene = this.$data.viewer.scene;
       //小车旋转角度
       let radian = Cesium.Math.toRadians(3.0);
       // 小车的速度
@@ -297,7 +330,7 @@ export default {
         minimumPixelSize: 128,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
       });
-      this.$data.models.push(model)
+      this.$data.models.push(model);
       let carPrimitive = scene.primitives.add(model);
       // Query the terrain height of two Cartographic positions
 
@@ -361,13 +394,12 @@ export default {
           carPrimitive.modelMatrix
         );
       }
-      var keydownEvent = function(e){
-        
+      var keydownEvent = function(e) {
         setFlagStatus(e, true);
-      }
+      };
       var keyupEvent = function(e) {
         setFlagStatus(e, false);
-      }
+      };
       var moveModelEvent = function(clock) {
         if (flag.moveUp) {
           if (flag.moveLeft) {
@@ -387,21 +419,23 @@ export default {
           }
           moveCar(false);
         }
-      }
-      this.$data.currentListener.push(keydownEvent)
-      this.$data.currentListener.push(keyupEvent)
-      this.$data.currentListener.push(moveModelEvent)
+      };
+      this.$data.currentListener.push(keydownEvent);
+      this.$data.currentListener.push(keyupEvent);
+      this.$data.currentListener.push(moveModelEvent);
       document.addEventListener("keydown", keydownEvent);
       document.addEventListener("keyup", keyupEvent);
       this.$data.viewer.clock.onTick.addEventListener(moveModelEvent);
     },
-    getCursorPosition: function(viewer) {
+    getCursorPosition: function() {
+      var viewer = this.$data.viewer;
       var that = this;
       //得到当前三维场景
       var scene = viewer.scene;
       //得到当前三维场景的椭球体s
       var ellipsoid = scene.globe.ellipsoid;
       var entity = viewer.entities.add({
+        id: "cursorPosition",
         label: {
           show: false,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
@@ -706,6 +740,183 @@ export default {
           this.$data.particleSystem.pop()
         );
       }
+    },
+    clipFuction: function() {
+      var viewer = this.$data.viewer;
+      var clippingPlanes_x = 0.0;
+      var clippingPlanes_y = 0.0;
+      var clippingPlanes_z = -1.0;
+      var clippingPlanes_dis = 0.0;
+      //init
+      var clippingPlanes = [
+        new Cesium.ClippingPlane(new Cesium.Cartesian3(0.0, 0.0, -1.0), 0.0)
+      ];
+      var modelEntityClippingPlanes = new Cesium.ClippingPlaneCollection({
+        planes: clippingPlanes,
+        edgeWidth: 1.0,
+        edgeColor: Cesium.Color.RED
+      });
+      function updateClippingPlanes() {
+        if (flags["looking"] == true) {
+          modelEntityClippingPlanes.removeAll();
+          if (flags.moveForward) {
+            clippingPlanes_x++;
+          }
+          if (flags.moveBackward) {
+            clippingPlanes_x--;
+          }
+          if (flags.moveUp) {
+            clippingPlanes_dis++;
+          }
+          if (flags.moveDown) {
+            clippingPlanes_dis--;
+          }
+          if (flags.moveLeft) {
+            clippingPlanes_y++;
+          }
+          if (flags.moveRight) {
+            clippingPlanes_y--;
+          }
+          modelEntityClippingPlanes.add(
+            new Cesium.ClippingPlane(
+              new Cesium.Cartesian3(
+                clippingPlanes_x,
+                clippingPlanes_y,
+                clippingPlanes_z
+              ),
+              clippingPlanes_dis
+            )
+          );
+        }
+
+        return modelEntityClippingPlanes;
+      }
+      var x = -123.0744619;
+      var y = 44.0503706;
+      var z = 1000.0;
+      var position = Cesium.Cartesian3.fromDegrees(x, y, z);
+      var heading = Cesium.Math.toRadians(135.0);
+      var pitch = 0.0;
+      var roll = 0.0;
+      var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+      var orientation = Cesium.Transforms.headingPitchRollQuaternion(
+        position,
+        hpr
+      );
+      var entity = viewer.entities.add({
+        id: "entityClippingModel",
+        name: "entityClippingModel",
+        position: position,
+        orientation: orientation,
+        model: {
+          uri: "/static/models/Cesium_Air.glb",
+          scale: 8,
+          minimumPixelSize: 100.0,
+          clippingPlanes: new Cesium.CallbackProperty(
+            updateClippingPlanes,
+            false
+          ) // 设置模型的裁切平面
+        },
+        description:
+          "<p><a href='http://www.agi.com' target='_blank'>Analytical Graphics, Inc.</a> (AGI) founded Cesium.</p>"
+      });
+      console.log(entity);
+      viewer.zoomTo(entity);
+      var speed = 100;
+      for (var i = 0; i < clippingPlanes.length; ++i) {
+        var plane = clippingPlanes[i];
+        var planeEntity = viewer.entities.add({
+          id: "entityClippingPlanes",
+          position: position,
+          // position: new Cesium.CallbackProperty(function(time, result) {
+          //   if (flags.moveForward) {
+          //     x += speed * 0.000005;
+          //     position = Cesium.Cartesian3.fromDegrees(x, y, z);
+          //   }
+          //   if (flags.moveBackward) {
+          //     x -= speed * 0.000005;
+          //     position = Cesium.Cartesian3.fromDegrees(x, y, z);
+          //   }
+          //   if (flags.moveUp) {
+          //     z += speed * 0.005;
+          //     position = Cesium.Cartesian3.fromDegrees(x, y, z);
+          //   }
+          //   if (flags.moveDown) {
+          //     z -= speed * 0.005;
+          //     position = Cesium.Cartesian3.fromDegrees(x, y, z);
+          //   }
+          //   if (flags.moveLeft) {
+          //     y += speed * 0.000005;
+          //     position = Cesium.Cartesian3.fromDegrees(x, y, z);
+          //   }
+          //   if (flags.moveRight) {
+          //     y -= speed * 0.000005;
+          //     position = Cesium.Cartesian3.fromDegrees(x, y, z);
+          //   }
+          //   // console.log("x="+x)
+          //   // console.log("y="+y)
+          //   // console.log("z="+z)
+          //   return position;
+          // }, false),
+          plane: {
+            dimensions: new Cesium.Cartesian2(300.0, 300.0),
+            material: Cesium.Color.WHITE.withAlpha(0.1),
+            plane: new Cesium.CallbackProperty(function(time, result) {
+              // console.log(result)
+              return modelEntityClippingPlanes.get(0);
+            }, false),
+            outline: true,
+            outlineColor: Cesium.Color.WHITE
+          }
+        });
+        viewer.trackedEntity = planeEntity;
+        // planeEntities.push(planeEntity);
+      }
+      var flags = {
+        looking: true,
+        moveForward: false,
+        moveBackward: false,
+        moveUp: false,
+        moveDown: false,
+        moveLeft: false,
+        moveRight: false
+      };
+      function getFlagForKeyCode(keyCode) {
+        switch (keyCode) {
+          case "W".charCodeAt(0):
+            return "moveForward";
+          case "S".charCodeAt(0):
+            return "moveBackward";
+          case "Q".charCodeAt(0):
+            return "moveUp";
+          case "E".charCodeAt(0):
+            return "moveDown";
+          case "D".charCodeAt(0):
+            return "moveRight";
+          case "A".charCodeAt(0):
+            return "moveLeft";
+          default:
+            return undefined;
+        }
+      }
+      var keyDown = function(e) {
+        var flagName = getFlagForKeyCode(e.keyCode);
+        if (typeof flagName !== "undefined") {
+          flags[flagName] = true;
+          flags["looking"] = true;
+        }
+      };
+      var keyUp = function(e) {
+        var flagName = getFlagForKeyCode(e.keyCode);
+        if (typeof flagName !== "undefined") {
+          flags[flagName] = false;
+          flags["looking"] = false;
+        }
+      };
+      document.addEventListener("keydown", keyDown, false);
+      document.addEventListener("keyup", keyUp, false);
+      this.$data.currentListener.push(keyDown);
+      this.$data.currentListener.push(keyUp);
     }
   }
 };

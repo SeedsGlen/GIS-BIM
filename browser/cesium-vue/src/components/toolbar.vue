@@ -27,7 +27,7 @@ export default {
         },
         {
           value: "4",
-          label: "龙须面"
+          label: "平面裁剪"
         },
         {
           value: "5",
@@ -43,7 +43,7 @@ export default {
   },
   watch: {
     value(val, oldVal) {
-      console.log(this.$refs["select"].blur())
+      this.$refs["select"].blur()
       this.$emit('changeFuction',{val, oldVal})
     }
   }

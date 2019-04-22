@@ -24,7 +24,8 @@ export default {
       models: [],
       cityData: {},
       particleSystem: [],
-      currentListener: []
+      currentListener: [],
+      bimPrimitives: [] //this.$data.viewer.scene.primitives.remove
     };
   },
   mounted() {
@@ -73,16 +74,16 @@ export default {
   methods: {
     handleSearch: function(location) {
       console.log(location);
-      this.$data.viewer.camera.setView({
+      this.$data.viewer.camera.flyTo({
         destination: new Cesium.Cartesian3.fromDegrees(
           location.split(",")[0],
           location.split(",")[1],
           3000
-        ),
-        orientation: {
-          heading: 4.731089976107251,
-          pitch: -0.32003481981370063
-        }
+        )
+        // orientation: {
+        //   heading: 4.731089976107251,
+        //   pitch: -0.32003481981370063
+        // }
       });
     },
     cancelFuction: function(oldVal) {
@@ -127,6 +128,11 @@ export default {
           document.removeEventListener(
             "keydown",
             this.$data.currentListener.pop()
+          );
+          break;
+        case "5":
+          this.$data.viewer.scene.primitives.remove(
+            this.$data.bimPrimitives.pop()
           );
           break;
       }
@@ -535,6 +541,11 @@ export default {
             .then(function(response) {
               // console.log(response);
               if (response.data.status == "1") {
+                that.newsDisplay({
+                  province: response.data.regeocode.addressComponent.province,
+                  district: response.data.regeocode.addressComponent.district,
+                  township: response.data.regeocode.addressComponent.township
+                });
                 that.axios
                   .get("https://restapi.amap.com/v3/weather/weatherInfo", {
                     params: {
@@ -549,7 +560,6 @@ export default {
                       that.removeCurrentWeather();
                       if (response.data.lives[0].weather.indexOf("阴") != -1) {
                         // rain
-                        // that.addWeather("雨", "中");
                         that.addWeather("雪", "中");
                       } else if (
                         response.data.lives[0].weather.indexOf("雪") != -1
@@ -977,29 +987,29 @@ export default {
     },
     bimMDisplay: function() {
       var tileset = new Cesium.Cesium3DTileset({
-        url: "/static/Cesium3DTiles/Batched/BatchedTranslucent/tileset.json"
+        url: "/static/Cesium3DTiles/NewYork/tileset.json"
       });
-      // function colorByHeight() {
-      //   tileset.style = new Cesium.Cesium3DTileStyle({
-      //     color: {
-      //       conditions: [
-      //         ["${height} >= 300", "rgba(45, 0, 75, 0.5)"],
-      //         ["${height} >= 200", "rgb(102, 71, 151)"],
-      //         ["${height} >= 100", "rgb(170, 162, 204)"],
-      //         ["${height} >= 50", "rgb(224, 226, 238)"],
-      //         ["${height} >= 25", "rgb(252, 230, 200)"],
-      //         ["${height} >= 10", "rgb(248, 176, 87)"],
-      //         ["${height} >= 5", "rgb(198, 106, 11)"],
-      //         ["true", "rgb(127, 59, 8)"]
-      //       ]
-      //     }
-      //   });
-      // }
       var that = this;
-      var viewer = this.$data.viewer
+      var viewer = this.$data.viewer;
+      var initialPosition = Cesium.Cartesian3.fromDegrees(
+        -74.01881302800248,
+        40.69114333714821,
+        753
+      );
+      var initialOrientation = new Cesium.HeadingPitchRoll.fromDegrees(
+        21.27879878293835,
+        -21.34390550872461,
+        0.0716951918898415
+      );
+      viewer.scene.camera.flyTo({
+        destination: initialPosition,
+        orientation: initialOrientation,
+        endTransform: Cesium.Matrix4.IDENTITY
+      });
       tileset.readyPromise
         .then(function(tileset) {
-          that.change3DtilesetHeight(tileset, 100);
+          // that.change3DtilesetHeight(tileset, 100);
+          that.$data.bimPrimitives.push(tileset);
           that.$data.viewer.scene.primitives.add(tileset);
           that.$data.viewer.zoomTo(
             tileset,
@@ -1013,24 +1023,256 @@ export default {
         .otherwise(function(error) {
           console.log(error);
         });
-      var handler = new Cesium.ScreenSpaceEventHandler(this.$data.viewer.scene.canvas);
-      handler.setInputAction(function(movement) {
-        var pickedPrimitive = that.$data.viewer.scene.pick(movement.endPosition);
-        var pickedEntity = Cesium.defined(pickedPrimitive)
-          ? pickedPrimitive.id
-          : undefined;
-        // Highlight the currently picked entity
-        if (
-          Cesium.defined(pickedEntity) &&
-          Cesium.defined(pickedEntity.billboard)
+
+      // HTML overlay for showing feature name on mouseover
+      var nameOverlay = document.createElement("div");
+      viewer.container.appendChild(nameOverlay);
+      nameOverlay.className = "backdrop";
+      nameOverlay.style.display = "none";
+      nameOverlay.style.position = "absolute";
+      nameOverlay.style.bottom = "0";
+      nameOverlay.style.left = "0";
+      nameOverlay.style["pointer-events"] = "none";
+      nameOverlay.style.padding = "4px";
+      nameOverlay.style.backgroundColor = "black";
+
+      // Information about the currently selected feature
+      var selected = {
+        feature: undefined,
+        originalColor: new Cesium.Color()
+      };
+
+      // An entity object which will hold info about the currently selected feature for infobox display
+      var selectedEntity = new Cesium.Entity();
+
+      // Get default left click handler for when a feature is not picked on left click
+      var clickHandler = viewer.screenSpaceEventHandler.getInputAction(
+        Cesium.ScreenSpaceEventType.LEFT_CLICK
+      );
+
+      // If silhouettes are supported, silhouette features in blue on mouse over and silhouette green on mouse click.
+      // If silhouettes are not supported, change the feature color to yellow on mouse over and green on mouse click.
+      if (Cesium.PostProcessStageLibrary.isSilhouetteSupported(viewer.scene)) {
+        // Silhouettes are supported
+        var silhouetteBlue = Cesium.PostProcessStageLibrary.createEdgeDetectionStage();
+        silhouetteBlue.uniforms.color = Cesium.Color.BLUE;
+        silhouetteBlue.uniforms.length = 0.01;
+        silhouetteBlue.selected = [];
+
+        var silhouetteGreen = Cesium.PostProcessStageLibrary.createEdgeDetectionStage();
+        silhouetteGreen.uniforms.color = Cesium.Color.LIME;
+        silhouetteGreen.uniforms.length = 0.01;
+        silhouetteGreen.selected = [];
+
+        viewer.scene.postProcessStages.add(
+          Cesium.PostProcessStageLibrary.createSilhouetteStage([
+            silhouetteBlue,
+            silhouetteGreen
+          ])
+        );
+
+        // Silhouette a feature blue on hover.
+        viewer.screenSpaceEventHandler.setInputAction(function onMouseMove(
+          movement
         ) {
-          pickedEntity.billboard.scale = 2.0;
-          pickedEntity.billboard.color = Cesium.Color.ORANGERED;
-        }
-      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-      // this.$data.viewer.zoomTo(tileset);
+          // If a feature was previously highlighted, undo the highlight
+          silhouetteBlue.selected = [];
+
+          // Pick a new feature
+          var pickedFeature = viewer.scene.pick(movement.endPosition);
+          if (!Cesium.defined(pickedFeature)) {
+            nameOverlay.style.display = "none";
+            return;
+          }
+
+          // A feature was picked, so show it's overlay content
+          nameOverlay.style.display = "block";
+          nameOverlay.style.bottom =
+            viewer.canvas.clientHeight - movement.endPosition.y + "px";
+          nameOverlay.style.left = movement.endPosition.x + "px";
+          var name = pickedFeature.getProperty("name");
+          if (!Cesium.defined(name)) {
+            name = pickedFeature.getProperty("id");
+          }
+          nameOverlay.textContent = name;
+
+          // Highlight the feature if it's not already selected.
+          if (pickedFeature !== selected.feature) {
+            silhouetteBlue.selected = [pickedFeature];
+          }
+        },
+        Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        // Silhouette a feature on selection and show metadata in the InfoBox.
+        viewer.screenSpaceEventHandler.setInputAction(function onLeftClick(
+          movement
+        ) {
+          // If a feature was previously selected, undo the highlight
+          silhouetteGreen.selected = [];
+
+          // Pick a new feature
+          var pickedFeature = viewer.scene.pick(movement.position);
+          if (!Cesium.defined(pickedFeature)) {
+            clickHandler(movement);
+            return;
+          }
+
+          // Select the feature if it's not already selected
+          if (silhouetteGreen.selected[0] === pickedFeature) {
+            return;
+          }
+
+          // Save the selected feature's original color
+          var highlightedFeature = silhouetteBlue.selected[0];
+          if (pickedFeature === highlightedFeature) {
+            silhouetteBlue.selected = [];
+          }
+
+          // Highlight newly selected feature
+          silhouetteGreen.selected = [pickedFeature];
+
+          // Set feature infobox description
+          var featureName = pickedFeature.getProperty("name");
+          selectedEntity.name = featureName;
+          // selectedEntity.description =
+          //   'Loading <div class="cesium-infoBox-loading"></div>';
+          // viewer.selectedEntity = selectedEntity;
+          // selectedEntity.description =
+          //   '<table class="cesium-infoBox-defaultTable"><tbody>' +
+          //   "<tr><th>BIN</th><td>" +
+          //   pickedFeature.getProperty("BIN") +
+          //   "</td></tr>" +
+          //   "<tr><th>DOITT ID</th><td>" +
+          //   pickedFeature.getProperty("DOITT_ID") +
+          //   "</td></tr>" +
+          //   "<tr><th>SOURCE ID</th><td>" +
+          //   pickedFeature.getProperty("SOURCE_ID") +
+          //   "</td></tr>" +
+          //   "</tbody></table>";
+        },
+        Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      } else {
+        // Silhouettes are not supported. Instead, change the feature color.
+
+        // Information about the currently highlighted feature
+        var highlighted = {
+          feature: undefined,
+          originalColor: new Cesium.Color()
+        };
+
+        // Color a feature yellow on hover.
+        viewer.screenSpaceEventHandler.setInputAction(function onMouseMove(
+          movement
+        ) {
+          // If a feature was previously highlighted, undo the highlight
+          if (Cesium.defined(highlighted.feature)) {
+            highlighted.feature.color = highlighted.originalColor;
+            highlighted.feature = undefined;
+          }
+          // Pick a new feature
+          var pickedFeature = viewer.scene.pick(movement.endPosition);
+          if (!Cesium.defined(pickedFeature)) {
+            nameOverlay.style.display = "none";
+            return;
+          }
+          // A feature was picked, so show it's overlay content
+          nameOverlay.style.display = "block";
+          nameOverlay.style.bottom =
+            viewer.canvas.clientHeight - movement.endPosition.y + "px";
+          nameOverlay.style.left = movement.endPosition.x + "px";
+          var name = pickedFeature.getProperty("name");
+          if (!Cesium.defined(name)) {
+            name = pickedFeature.getProperty("id");
+          }
+          nameOverlay.textContent = name;
+          // Highlight the feature if it's not already selected.
+          if (pickedFeature !== selected.feature) {
+            highlighted.feature = pickedFeature;
+            Cesium.Color.clone(pickedFeature.color, highlighted.originalColor);
+            pickedFeature.color = Cesium.Color.YELLOW;
+          }
+        },
+        Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        // Color a feature on selection and show metadata in the InfoBox.
+        viewer.screenSpaceEventHandler.setInputAction(function onLeftClick(
+          movement
+        ) {
+          // If a feature was previously selected, undo the highlight
+          if (Cesium.defined(selected.feature)) {
+            selected.feature.color = selected.originalColor;
+            selected.feature = undefined;
+          }
+          // Pick a new feature
+          var pickedFeature = viewer.scene.pick(movement.position);
+          if (!Cesium.defined(pickedFeature)) {
+            clickHandler(movement);
+            return;
+          }
+          // Select the feature if it's not already selected
+          if (selected.feature === pickedFeature) {
+            return;
+          }
+          selected.feature = pickedFeature;
+          // Save the selected feature's original color
+          if (pickedFeature === highlighted.feature) {
+            Cesium.Color.clone(
+              highlighted.originalColor,
+              selected.originalColor
+            );
+            highlighted.feature = undefined;
+          } else {
+            Cesium.Color.clone(pickedFeature.color, selected.originalColor);
+          }
+          // Highlight newly selected feature
+          pickedFeature.color = Cesium.Color.LIME;
+          // Set feature infobox description
+          var featureName = pickedFeature.getProperty("name");
+          selectedEntity.name = featureName;
+          selectedEntity.description =
+            'Loading <div class="cesium-infoBox-loading"></div>';
+          viewer.selectedEntity = selectedEntity;
+          selectedEntity.description =
+            '<table class="cesium-infoBox-defaultTable"><tbody>' +
+            "<tr><th>BIN</th><td>" +
+            pickedFeature.getProperty("BIN") +
+            "</td></tr>" +
+            "<tr><th>DOITT ID</th><td>" +
+            pickedFeature.getProperty("DOITT_ID") +
+            "</td></tr>" +
+            "<tr><th>SOURCE ID</th><td>" +
+            pickedFeature.getProperty("SOURCE_ID") +
+            "</td></tr>" +
+            "<tr><th>Longitude</th><td>" +
+            pickedFeature.getProperty("longitude") +
+            "</td></tr>" +
+            "<tr><th>Latitude</th><td>" +
+            pickedFeature.getProperty("latitude") +
+            "</td></tr>" +
+            "<tr><th>Height</th><td>" +
+            pickedFeature.getProperty("height") +
+            "</td></tr>" +
+            "<tr><th>Terrain Height (Ellipsoid)</th><td>" +
+            pickedFeature.getProperty("TerrainHeight") +
+            "</td></tr>" +
+            "</tbody></table>";
+        },
+        Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      }
+      this.$data.viewer.zoomTo(tileset);
 
       // colorByHeight()
+    },
+    newsDisplay: function(location) {
+      console.log(location);
+      this.axios
+        .get("http://localhost:8081/api/", {
+        })
+        .then(function(response) {
+        })
+        .catch(function(error) {
+          console.log(error);
+        });
     }
   }
 };

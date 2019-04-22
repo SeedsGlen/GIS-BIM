@@ -31,7 +31,7 @@ export default {
         },
         {
           value: "5",
-          label: "北京烤鸭"
+          label: "BIM"
         }
       ],
       value: ""

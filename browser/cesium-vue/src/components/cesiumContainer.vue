@@ -44,34 +44,31 @@ export default {
     var scene = viewer.scene;
     scene.globe.depthTestAgainstTerrain = true;
     scene.globe.enableLighting = true;
-    // var tileset = viewer.scene.primitives.add(
-    //   new Cesium.Cesium3DTileset({
-    //     url: Cesium.IonResource.fromAssetId(20119)
+
+    // var tileset = new Cesium.Cesium3DTileset({
+    //   url: Cesium.IonResource.fromAssetId(20119)
+    // });
+
+    // tileset.readyPromise
+    //   .then(function(tileset) {
+    //     changeHeight(100);
+    //     viewer.scene.primitives.add(tileset);
+    //     viewer.zoomTo(
+    //       tileset,
+    //       new Cesium.HeadingPitchRange(
+    //         0.0,
+    //         -0.5,
+    //         tileset.boundingSphere.radius * 2.0
+    //       )
+    //     );
     //   })
-    // );
+    //   .otherwise(function(error) {
+    //     console.log(error);
+    //   });
+    // viewer.scene.primitives.add();
 
     // viewer.scene.primitives.add(tileset);
     // viewer.zoomTo(tileset);
-
-    // viewer.clock.onTick.addEventListener(function() {
-    //   if (viewer.camera.pitch > 0) {
-    //     viewer.scene.screenSpaceCameraController.enableTilt = false;
-    //   }
-    // });
-    // var mousePosition, startMousePosition;
-    // var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
-    // handler.setInputAction(function(movement) {
-    //   mousePosition = startMousePosition = Cesium.Cartesian3.clone(
-    //     movement.position
-    //   );
-    //   handler.setInputAction(function(movement) {
-    //     mousePosition = movement.endPosition;
-    //     var y = mousePosition.y - startMousePosition.y;
-    //     if (y > 0) {
-    //       viewer.scene.screenSpaceCameraController.enableTilt = true;
-    //     }
-    //   }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    // }, Cesium.ScreenSpaceEventType.MIDDLE_DOWN);
   },
   methods: {
     handleSearch: function(location) {
@@ -150,6 +147,9 @@ export default {
         case "4":
           this.clipFuction();
           break;
+        case "5":
+          this.bimMDisplay();
+          break;
       }
     },
     changeFuction: function(status) {
@@ -160,8 +160,9 @@ export default {
       this.chooseFuction(status.val);
       console.log("选择功能" + status.val);
     },
-    distanceFuction: function(viewer) {
+    distanceFuction: function() {
       try {
+        var viewer = this.$data.viewer;
         var model_line;
         let PolyLinePrimitive = (function() {
           function _(positions) {
@@ -312,7 +313,9 @@ export default {
       let speedVector = new Cesium.Cartesian3();
       // 起始位置
       let position = Cesium.Cartesian3.fromDegrees(116.080591, 39.919141, 3000);
-
+      this.$data.viewer.camera.flyTo({
+        destination: position
+      });
       // 用于设置小车方向
       let hpRoll = new Cesium.HeadingPitchRoll();
       let fixedFrameTransforms = Cesium.Transforms.localFrameToFixedFrameGenerator(
@@ -746,12 +749,19 @@ export default {
       var clippingPlanes_x = 0.0;
       var clippingPlanes_y = 0.0;
       var clippingPlanes_z = 1.0;
-      var clippingAngleX = 0
-      var clippingAngleY = 0
+      var clippingAngleX = 0;
+      var clippingAngleY = 0;
       var clippingPlanes_dis = 0.0;
       //init
       var clippingPlanes = [
-        new Cesium.ClippingPlane(new Cesium.Cartesian3(clippingPlanes_x, clippingPlanes_y, clippingPlanes_z), 0.0)
+        new Cesium.ClippingPlane(
+          new Cesium.Cartesian3(
+            clippingPlanes_x,
+            clippingPlanes_y,
+            clippingPlanes_z
+          ),
+          0.0
+        )
       ];
       var modelEntityClippingPlanes = new Cesium.ClippingPlaneCollection({
         planes: clippingPlanes,
@@ -763,16 +773,24 @@ export default {
           modelEntityClippingPlanes.removeAll();
           if (flags.moveForward) {
             clippingAngleX += 0.1;
-            clippingPlanes_x = Math.sin(clippingAngleX)
-            clippingPlanes_z = Math.cos(clippingAngleX)
-            console.log("("+clippingPlanes_x+ ","+clippingPlanes_y+","+clippingPlanes_z+")")
-            console.log("clippingPlanes_x"+clippingPlanes_x)
-            console.log("clippingPlanes_y"+clippingPlanes_z)
+            clippingPlanes_x = Math.sin(clippingAngleX);
+            clippingPlanes_z = Math.cos(clippingAngleX);
+            console.log(
+              "(" +
+                clippingPlanes_x +
+                "," +
+                clippingPlanes_y +
+                "," +
+                clippingPlanes_z +
+                ")"
+            );
+            console.log("clippingPlanes_x" + clippingPlanes_x);
+            console.log("clippingPlanes_y" + clippingPlanes_z);
           }
           if (flags.moveBackward) {
             clippingAngleX -= 0.1;
-            clippingPlanes_x = Math.sin(clippingAngleX)
-            clippingPlanes_z = Math.cos(clippingAngleX)
+            clippingPlanes_x = Math.sin(clippingAngleX);
+            clippingPlanes_z = Math.cos(clippingAngleX);
           }
           if (flags.moveUp) {
             clippingPlanes_dis++;
@@ -781,14 +799,14 @@ export default {
             clippingPlanes_dis--;
           }
           if (flags.moveLeft) {
-            clippingAngleY += 0.1
-            clippingPlanes_y = Math.sin(clippingAngleY)
-            clippingPlanes_z = Math.cos(clippingAngleY)
+            clippingAngleY += 0.1;
+            clippingPlanes_y = Math.sin(clippingAngleY);
+            clippingPlanes_z = Math.cos(clippingAngleY);
           }
           if (flags.moveRight) {
             clippingAngleY -= 0.1;
-            clippingPlanes_y = Math.sin(clippingAngleY)
-            clippingPlanes_z = Math.cos(clippingAngleY)
+            clippingPlanes_y = Math.sin(clippingAngleY);
+            clippingPlanes_z = Math.cos(clippingAngleY);
           }
           modelEntityClippingPlanes.add(
             new Cesium.ClippingPlane(
@@ -930,6 +948,89 @@ export default {
       document.addEventListener("keyup", keyUp, false);
       this.$data.currentListener.push(keyDown);
       this.$data.currentListener.push(keyUp);
+    },
+    change3DtilesetHeight: function(tileset, height) {
+      console.log(tileset.boundingSphere.center);
+      height = Number(height);
+      if (isNaN(height)) {
+        return;
+      }
+      var cartographic = Cesium.Cartographic.fromCartesian(
+        tileset.boundingSphere.center
+      );
+      var surface = Cesium.Cartesian3.fromRadians(
+        cartographic.longitude,
+        cartographic.latitude,
+        cartographic.height
+      );
+      var offset = Cesium.Cartesian3.fromRadians(
+        cartographic.longitude,
+        cartographic.latitude,
+        height
+      );
+      var translation = Cesium.Cartesian3.subtract(
+        offset,
+        surface,
+        new Cesium.Cartesian3()
+      );
+      tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+    },
+    bimMDisplay: function() {
+      var tileset = new Cesium.Cesium3DTileset({
+        url: "/static/Cesium3DTiles/Batched/BatchedTranslucent/tileset.json"
+      });
+      // function colorByHeight() {
+      //   tileset.style = new Cesium.Cesium3DTileStyle({
+      //     color: {
+      //       conditions: [
+      //         ["${height} >= 300", "rgba(45, 0, 75, 0.5)"],
+      //         ["${height} >= 200", "rgb(102, 71, 151)"],
+      //         ["${height} >= 100", "rgb(170, 162, 204)"],
+      //         ["${height} >= 50", "rgb(224, 226, 238)"],
+      //         ["${height} >= 25", "rgb(252, 230, 200)"],
+      //         ["${height} >= 10", "rgb(248, 176, 87)"],
+      //         ["${height} >= 5", "rgb(198, 106, 11)"],
+      //         ["true", "rgb(127, 59, 8)"]
+      //       ]
+      //     }
+      //   });
+      // }
+      var that = this;
+      var viewer = this.$data.viewer
+      tileset.readyPromise
+        .then(function(tileset) {
+          that.change3DtilesetHeight(tileset, 100);
+          that.$data.viewer.scene.primitives.add(tileset);
+          that.$data.viewer.zoomTo(
+            tileset,
+            new Cesium.HeadingPitchRange(
+              0.0,
+              -0.5,
+              tileset.boundingSphere.radius * 2.0
+            )
+          );
+        })
+        .otherwise(function(error) {
+          console.log(error);
+        });
+      var handler = new Cesium.ScreenSpaceEventHandler(this.$data.viewer.scene.canvas);
+      handler.setInputAction(function(movement) {
+        var pickedPrimitive = that.$data.viewer.scene.pick(movement.endPosition);
+        var pickedEntity = Cesium.defined(pickedPrimitive)
+          ? pickedPrimitive.id
+          : undefined;
+        // Highlight the currently picked entity
+        if (
+          Cesium.defined(pickedEntity) &&
+          Cesium.defined(pickedEntity.billboard)
+        ) {
+          pickedEntity.billboard.scale = 2.0;
+          pickedEntity.billboard.color = Cesium.Color.ORANGERED;
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+      // this.$data.viewer.zoomTo(tileset);
+
+      // colorByHeight()
     }
   }
 };
